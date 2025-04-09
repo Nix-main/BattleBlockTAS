@@ -42,7 +42,7 @@ public class Main {
             Process process = processBuilder.start();
             Thread countthread = new Thread(() -> {
                 long frame = 0;
-                long start = System.currentTimeMillis();
+                long start = System.nanoTime();
                 JFrame display = new JFrame("Frame Counter");
                 display.setSize(200, 75);
                 display.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -69,13 +69,14 @@ public class Main {
                         millis = millis.substring(millis.indexOf("."), millis.indexOf(".") + 3);
                     }
                     counter.setText(frame + "             " + String.format("%s:%s%s", ((int) frame / 60 / 60), seconds, millis));
+                    
                     if (!PAUSED){
-                        if (System.currentTimeMillis() - start >= 166){
+                        if (System.nanoTime() - start >= 16666660){
                             frame++;
-                            start = System.currentTimeMillis();
+                            start = System.nanoTime();
                         }
                     } else {
-                        start = System.currentTimeMillis();
+                        start = System.nanoTime();
                     }
                 }
             });
@@ -103,7 +104,7 @@ public class Main {
                                 PAUSED = true;
                                 unpause();
                                 try {
-                                    Thread.sleep(166);
+                                    Thread.sleep(0, 16666660);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }

@@ -30,7 +30,7 @@ public class InputEditor {
         this.frame = frame;
         jframe = new JFrame("Input Editor");
         renderer = new ColorRenderHandler();
-        model = new DefaultTableModel(new Object[]{"Frame", "Left", "Right", "Up", "Down", "Jump", "Weapon", "Swap Weapon", "Shove", "Grab", "Pause", "Rock", "Call", "Interact"}, 200){
+        model = new DefaultTableModel(new Object[]{"Frame", "Left", "Right", "Up", "Down", "Jump", "Weapon", "Swap Weapon", "Shove", "Grab", "Pause", "Call", "Interact"}, 200){
             @Override
             public boolean isCellEditable(int row, int column){
                 return false;
