@@ -5,8 +5,11 @@ import lc.kra.system.keyboard.event.GlobalKeyEvent;
 import lc.kra.system.keyboard.event.GlobalKeyListener;
 
 import javax.swing.*;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -14,15 +17,29 @@ public class Main {
 
     private static boolean PAUSED;
     public static final Runtime RUNTIME = Runtime.getRuntime();
-    private static String SUSPENDPATH;
+    public static String PATH;
     private static long saveframe = 0;
-
 
     @SuppressWarnings("deprecation")
     public static void main(String[] args) {
         File file = new File("./");
-        SUSPENDPATH = (file.getAbsolutePath().replace("\\.", "\\src\\main\\resources\\"));
-        String path = "C:\\Program Files (x86)\\Steam\\steamapps\\common\\BattleBlock Theater";
+        PATH = (file.getAbsolutePath().replace("\\.", "\\src\\main\\resources\\"));
+        Scanner scanner = new Scanner(System.in);
+        System.setProperty("java.library.path", PATH + "\\Integration");
+
+        boolean inputs = true;
+        String path = "";
+        while (inputs){
+            System.out.println("Enter the absolute path to your BattleBlock Theater folder!");
+            System.out.println("Example: D:\\SteamLibrary\\steamapps\\common\\BattleBlock Theater");
+            String t = scanner.nextLine();
+            if (!new File(t).exists()) {
+                System.out.println("Not a file!");
+            } else {
+                path = t;
+                inputs = false;
+            }
+        }
         File gameDirectory = new File(path);
         File gameFile = new File(gameDirectory + "\\BattleBlockTheater");
         System.out.println(gameFile.getAbsoluteFile());
@@ -35,8 +52,7 @@ public class Main {
 
         InputEditor editor = new InputEditor(saveframe);
         editor.addTable();
-        editor.displayEditor();
-
+        editor.getSave().prompt();
 
         try {
             Process process = processBuilder.start();
@@ -50,11 +66,12 @@ public class Main {
                 display.setVisible(true);
                 JLabel counter = new JLabel("Frame");
                 display.add(counter);
-
                 while (true){
                     if (cachedframe[0] > 0){
                         frame += cachedframe[0];
-                        cachedframe[0] = 0;}
+                        cachedframe[0] = 0;
+                        editor.getRecorder().advanceFrame();
+                    }
                     saveframe = frame;
                     editor.updateFrame(frame);
                     String seconds;
@@ -69,9 +86,10 @@ public class Main {
                         millis = millis.substring(millis.indexOf("."), millis.indexOf(".") + 3);
                     }
                     counter.setText(frame + "             " + String.format("%s:%s%s", ((int) frame / 60 / 60), seconds, millis));
-                    
+
                     if (!PAUSED){
                         if (System.nanoTime() - start >= 16666660){
+                            editor.getRecorder().advanceFrame();
                             frame++;
                             start = System.nanoTime();
                         }
@@ -89,11 +107,11 @@ public class Main {
                     if (globalKeyEvent.getVirtualKeyCode() == 186){
                         if (!PAUSED){
                                 pause();
-                                System.out.println("Paused game.");
+                                // System.out.println("Paused game.");
                                 PAUSED = true;
                         } else {
                                 unpause();
-                                System.out.println("Unpaused game.");
+                                // System.out.println("Unpaused game.");
                                 PAUSED = false;
                         }
                     }
@@ -104,14 +122,15 @@ public class Main {
                                 PAUSED = true;
                                 unpause();
                                 try {
-                                    Thread.sleep(0, 16666660);
+                                    Thread.sleep(16, 666660);
                                 } catch (InterruptedException e) {
                                     throw new RuntimeException(e);
                                 }
+                                editor.getRecorder().advanceFrame();
                                 pause();
 
                                 cachedframe[0]++;
-                                System.out.println("Advanced 1 frame");
+                                // System.out.println("Advanced 1 frame");
                             }
                         });
                     }
@@ -134,7 +153,21 @@ public class Main {
                     throw new RuntimeException(e);
                 }
             }));
+            boolean bool = true;
+            while (bool){
+                ProcessBuilder builder = new ProcessBuilder("wmic", "process", "where", "name='BattleBlockTheater.exe'", "get", "processId");
+                builder.redirectErrorStream(true);
+                Process procee = builder.start();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(procee.getInputStream()));
+                String line;
+                while ((line = reader.readLine()) != null){
+                    if (line.contains("ProcessId")){
+                        bool = false;
+                    }
+                }
+            }
             countthread.start();
+            editor.displayEditor();
         } catch (IOException | InterruptedException e) {
             System.err.println("Error launching or running game: " + e.getMessage());
         }
@@ -142,7 +175,7 @@ public class Main {
 
     private static void pause(){
         try {
-            RUNTIME.exec(SUSPENDPATH + "\\pssuspend.exe BattleBlockTheater.exe");
+            RUNTIME.exec(PATH + "\\pssuspend.exe BattleBlockTheater.exe");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -150,7 +183,7 @@ public class Main {
 
     private static void unpause(){
         try {
-            RUNTIME.exec(SUSPENDPATH + "\\pssuspend.exe -r BattleBlockTheater.exe");
+            RUNTIME.exec(PATH + "\\pssuspend.exe -r BattleBlockTheater.exe");
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -158,7 +191,7 @@ public class Main {
 
     public static void endOfEditor(){
         try {
-            RUNTIME.exec(SUSPENDPATH + "\\pssuspend.exe BattleBlockTheater.exe");
+            RUNTIME.exec(PATH + "\\pssuspend.exe BattleBlockTheater.exe");
             PAUSED = true;
             System.out.println("Reached end of input editor. Paused game.");
         } catch (IOException e) {

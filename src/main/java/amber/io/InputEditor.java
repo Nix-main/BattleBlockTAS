@@ -18,7 +18,11 @@ public class InputEditor {
     private final DefaultTableModel model;
     private final InputRecorder recorder;
     private final ColorRenderHandler renderer;
+    private final InputSave save;
 
+    public InputSave getSave() {return save;}
+    public InputRecorder getRecorder(){return recorder;}
+    public long getMaxFrame(){return table.getRowCount();}
     public JFrame getJFrame(){return jframe;}
     public long getCurrentFrame(){return frame;}
     public JTable getTable(){return table;}
@@ -34,7 +38,7 @@ public class InputEditor {
             @Override
             public boolean isCellEditable(int row, int column){
                 return false;
-            }
+            };
         };
         for (int i = 0; i < model.getRowCount(); i++){
             model.setValueAt(i+1, i, 0);
@@ -46,7 +50,7 @@ public class InputEditor {
             @Override
             public void mousePressed(MouseEvent e) {
                 if (e.getButton() == 3 && !e.isShiftDown()){
-                    System.out.print("\n# of frames to add: ");
+                    System.out.print("\n# of frames to add: ");;
                     int x = new Scanner(System.in).nextInt();
                     for (int i = 0; i < x; i++){
                         addRow();
@@ -54,7 +58,7 @@ public class InputEditor {
                 } else if (e.getButton() == 3){
                     System.out.println("\n# of frames to remove: ");
                     int x = new Scanner(System.in).nextInt();
-                    if (x > model.getRowCount()){
+                    if (x > model.getRowCount() || model.getRowCount() - x < getCurrentFrame()){
                         System.out.println("Too many frames!");
                         return;
                     }
@@ -63,10 +67,12 @@ public class InputEditor {
                     int row = table.rowAtPoint(e.getPoint());
                     int column = table.columnAtPoint(e.getPoint());
                     if (!(column == 0)) {
-                        if (model.getValueAt(row, column) == null) {
-                            model.setValueAt(table.getColumnName(column), row, column);
-                        } else {
-                            model.setValueAt(null, row, column);
+                        if (!(row < getCurrentFrame())) {
+                            if (model.getValueAt(row, column) == null) {
+                                model.setValueAt(table.getColumnName(column), row, column);
+                            } else {
+                                model.setValueAt(null, row, column);
+                            }
                         }
                     }
                 }
@@ -99,7 +105,9 @@ public class InputEditor {
         jframe.setLocationRelativeTo(null);
         jframe.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         jframe.setSize(600, 500);
+
         recorder = new InputRecorder(this);
+        save = new InputSave(this);
 
     }
 
@@ -134,7 +142,6 @@ public class InputEditor {
         }
         if (frame < update) {
             frame = update;
-            recorder.advanceFrame();
             jframe.repaint();
         }
     }

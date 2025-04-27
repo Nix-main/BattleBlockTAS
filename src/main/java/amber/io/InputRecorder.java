@@ -1,106 +1,94 @@
 package amber.io;
 
+import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.io.IOException;
-import java.util.Arrays;
-import java.awt.Robot;
 import java.util.List;
 import java.util.ArrayList;
 
 
 public class InputRecorder {
 
-    private InputEditor editor;
+    private final InputEditor editor;
 
-    public InputRecorder(InputEditor editor){
+    public InputRecorder(InputEditor editor) {
         this.editor = editor;
     }
 
 
-    private final List<Integer> pastKeyCodes;
+    private List<Integer> pastKeyCodes = new ArrayList<>();
 
-    public void advanceFrame(){
+    public void advanceFrame() {
         String[] values = new String[editor.getTable().getColumnCount()];
-        for (int i = 0; i < editor.getTable().getColumnCount(); i++){
+        for (int i = 0; i < editor.getTable().getColumnCount(); i++) {
             long x = editor.getCurrentFrame();
-            if (x >= editor.getTable().getRowCount()) x--;
-            Object value = editor.getTable().getValueAt((int) x, i);
-            if (value != null) values[i] = "" + value;
-        }
-        if (pastKeyCodes == null){
-            pastKeyCodes = new ArrayList<>();
+            if (x >= editor.getTable().getRowCount()) {
+                x--;
+            }
+            if (x < editor.getTable().getRowCount()) {
+                Object value = editor.getTable().getValueAt((int) x, i);
+                if (value != null) values[i] = "" + value;
+            }
         }
 
-        bringGameToFront();
-        Robot bot = new Robot();
+        Robot bot;
+        try {
+            bot = new Robot();
+        } catch (AWTException e) {
+            throw new RuntimeException(e);
+        }
         List<Integer> copy = pastKeyCodes;
         List<Integer> updatePast = new ArrayList<>();
-        for (String string : values){
-
-            int keycode = keyCodeFromString(string)
-            if (keycode == 0){
-                System.out.println("Something went wrong when reading inputs on frame: " + frame);
-                return;
+        for (String string : values) {
+            if (string == null) {
+                continue;
             }
 
-            if (!pastKeyCodes.contains(keycode)){
-                bot.keyPress(keycode);
-            } else {
-                copy.remove((Integer) keycode);
+            int keycode = switch (string) {
+                case "Left" -> KeyEvent.VK_LEFT;
+                case "Right" -> KeyEvent.VK_RIGHT;
+                case "Up" -> KeyEvent.VK_UP;
+                case "Down" -> KeyEvent.VK_DOWN;
+                case "Jump" -> KeyEvent.VK_SPACE;
+                case "Weapon" -> KeyEvent.VK_A;
+                case "Swap Weapon" -> KeyEvent.VK_OPEN_BRACKET;
+                case "Shove" -> KeyEvent.VK_D;
+                case "Grab" -> KeyEvent.VK_W;
+                case "Pause" -> KeyEvent.VK_ESCAPE;
+                case "Call" -> KeyEvent.VK_Q;
+                case "Interact" -> KeyEvent.VK_CONTROL;
+                default -> 0;
+            };
+            if (keycode != 0) {
+                if (!pastKeyCodes.contains(keycode)) {
+                    System.out.println(string);
+                    System.out.println(keycode);
+                    bringGameToFront();
+                    bot.keyPress(keycode);
+                } else {
+                    bringGameToFront();
+                    copy.remove((Integer) keycode);
+                    updatePast.add(keycode);
+                }
             }
-            updatePast.add((Integer) keycode);
-        };
-        for (Integer i : copy){
-            bot.keyRelease((int) i);
         }
+        for (Integer i : copy) {
+            if (i != 0) {
+                bot.keyRelease(i);
+                System.out.println("Released: " + i);
+            }
+        }
+        updatePast.forEach(System.out::println);
         pastKeyCodes = updatePast;
     }
 
 
-
-
-    public void bringGameToFront(){
-        CompletableFuture.runAsync(() -> {
-            String[] array = {
-                "powershell",
-                "Add-Type @\"",
-                "using System;",
-                "using System.Runtime.InteropServices;",
-                    "public class Win32 {
-                    ",/"[DllImport(\"user32.dll\")]",
-                    "public static extern bool SetForegroundWindow(IntPtr hWnd);",
-                    "}",
-                    "\"@",
-                    "$process = Get-Process -Name \"BattleBlockTheater\" -ErrorAction SilentlyContinue",
-                    "if ($process) {",
-                    "$hwnd = $process.MainWindowHandle",
-                    "[Win32]::SetForegroundWindow($hwnd)",
-                    "}"
-            };
-            ProcessBuilder builder = new ProcessBuilder(array);
+    public void bringGameToFront() {
+            ProcessBuilder builder = new ProcessBuilder(Main.PATH + "BringBBT.exe");
             try {
-                Process powershell = builder.start();
-                powershell.waitFor();
-            } catch (IOException e) {
+                builder.start().waitFor();
+            } catch (InterruptedException | IOException e) {
                 throw new RuntimeException(e);
             }
-        });
-    }
-
-    public int keyCodeFromString(String input){
-        return switch(input){
-            case "Left": 37
-            case "Right": 39
-            case "Up": 38
-            case "Down": 40
-            case "Jump": 32
-            case "Weapon": 65
-            case "Swap Weapon": 219
-            case "Shove": 68
-            case "Grab": 87
-            case "Pause": 27
-            case "Call": 81
-            case "Interact": 162
-            default: 0
         }
-    }
 }
